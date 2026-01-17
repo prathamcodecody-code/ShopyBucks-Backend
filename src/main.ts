@@ -19,6 +19,9 @@ async function bootstrap() {
   origin: [
     "http://localhost:3000",
     "http://localhost:3001",
+    "http://adminv2.shopybucks.com",
+    "https://www.shopybucks.com",
+    "http://seller.shopybucks.com"
   ],
   credentials: true,
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
@@ -52,10 +55,10 @@ console.log(
 
   // ================= SWAGGER =================
   const config = new DocumentBuilder()
-    .setTitle("FirstFemale API")
+    .setTitle("ShopyBucks API")
     .setDescription("E-commerce backend API documentation")
     .setVersion("1.0")
-    .addServer("https://api.firstfemale.in") // 👈 IMPORTANT
+    .addServer("http://apiv2.shopybucks.com") // 👈 IMPORTANT
     .addBearerAuth(
       {
         type: "http",
@@ -71,10 +74,11 @@ console.log(
 
 
   // ================= START SERVER =================
-  const PORT = process.env.PORT || 3030;
+  const PORT = process.env.PORT || 3031;
   await app.listen(PORT, "0.0.0.0");
 
   console.log(`🚀 Backend running on port ${PORT}`);
 }
 
 bootstrap();
+
