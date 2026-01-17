@@ -1,0 +1,453 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/.prisma/client"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model CartItem {
+  id          Int          @id @default(autoincrement())
+  quantity    Int          @default(1)
+  userId      Int
+  productId   Int
+  createdAt   DateTime     @default(now())
+  sizeId      Int?
+  product     Product      @relation(fields: [productId], references: [id], map: "CartItem_productId_fkey")
+  productsize ProductSize? @relation(fields: [sizeId], references: [id], map: "CartItem_sizeId_fkey")
+  user        User         @relation(fields: [userId], references: [id], map: "CartItem_userId_fkey")
+
+  @@index([productId], map: "CartItem_productId_fkey")
+  @@index([sizeId], map: "CartItem_sizeId_fkey")
+  @@index([userId], map: "CartItem_userId_fkey")
+}
+
+model Category {
+  id          Int           @id @default(autoincrement())
+  name        String
+  createdAt   DateTime      @default(now())
+  slug        String?       @unique(map: "slug")
+  product     Product[]
+  producttype ProductType[]
+}
+
+model Contact {
+  id        Int            @id @default(autoincrement())
+  name      String?
+  email     String?
+  phone     String?
+  subject   String?
+  message   String         @db.Text
+  reason    Contact_Reason @default(GENERAL)
+  status    Contact_Status @default(NEW)
+  orderId   Int?
+  userId    Int?
+  createdAt DateTime       @default(now())
+  order     Order?         @relation(fields: [orderId], references: [id], map: "fk_contact_order")
+  user      User?          @relation(fields: [orderId], references: [id], map: "fk_contact_user")
+
+  @@index([orderId])
+  @@index([userId])
+}
+
+model Feedback {
+  id        Int      @id @default(autoincrement())
+  message   String   @db.Text
+  page      String?
+  userId    Int?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Order {
+  id              Int           @id @default(autoincrement())
+  totalAmount     Decimal       @db.Decimal(10, 2)
+  status          Order_Status  @default(PENDING)
+  address         Json
+  createdAt       DateTime      @default(now())
+  userId          Int
+  paidAt          DateTime?
+  paymentId       String?
+  paymentMethod   String?
+  razorpayOrderId String?       @unique
+  contact         Contact[]
+  user            User          @relation("UserOrders", fields: [userId], references: [id], map: "fk_order_user")
+  orderitem       OrderItem[]
+  review          Review[]
+  sellerOrders    SellerOrder[]
+  User            User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model OrderItem {
+  id            Int              @id @default(autoincrement())
+  quantity      Int
+  price         Decimal          @db.Decimal(10, 2)
+  sellerId      Int
+  sellerOrderId Int
+  sellerOrder   SellerOrder      @relation(fields: [sellerOrderId], references: [id])
+  orderId       Int
+  productId     Int
+  createdAt     DateTime         @default(now())
+  discountType  String?
+  discountValue Decimal?         @db.Decimal(10, 2)
+  originalPrice Decimal?         @db.Decimal(10, 2)
+  sizeId        Int?
+  seller        User             @relation(fields: [sellerId], references: [id])
+  order         Order            @relation(fields: [orderId], references: [id])
+  product       Product          @relation(fields: [productId], references: [id])
+  productsize   ProductSize?     @relation(fields: [sizeId], references: [id], map: "OrderItem_sizeId_fkey")
+  status        OrderItem_Status @default(PENDING)
+
+  @@index([sellerId])
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+  @@index([productId], map: "OrderItem_productId_fkey")
+  @@index([sizeId], map: "OrderItem_sizeId_fkey")
+}
+
+model OtpCode {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique(map: "OtpCode_phone_key")
+  otpCode   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  tempData  String?  @db.LongText
+  createdAt DateTime @default(now())
+}
+
+model Product {
+  id            Int      @id @default(autoincrement())
+  title         String
+  description   String?  @db.Text
+  price         Decimal  @db.Decimal(10, 2)
+  stock         Int
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime
+  categoryId    Int
+  typeId        Int
+  subtypeId     Int
+  slug          String?  @unique(map: "Product_slug_key")
+  img1          String?
+  img2          String?
+  img3          String?
+  img4          String?
+  discountType  String?
+  discountValue Decimal? @db.Decimal(10, 2)
+  isActive      Boolean  @default(true)
+  sellerId      Int
+  seller        User     @relation(fields: [sellerId], references: [id])
+
+  metaTitle       String?        @db.VarChar(255)
+  metaDescription String?        @db.Text
+  metaKeywords    String?        @db.Text
+  status          ProductStatus
+  cartitem        CartItem[]
+  orderitem       OrderItem[]
+  category        Category       @relation(fields: [categoryId], references: [id], map: "Product_categoryId_fkey")
+  productsubtype  ProductSubtype @relation(fields: [subtypeId], references: [id], map: "Product_subtypeId_fkey")
+  producttype     ProductType    @relation(fields: [typeId], references: [id], map: "Product_typeId_fkey")
+  productsize     ProductSize[]
+  review          Review[]
+  wishlist        Wishlist[]
+
+  @@index([categoryId], map: "Product_categoryId_fkey")
+  @@index([subtypeId], map: "Product_subtypeId_fkey")
+  @@index([typeId], map: "Product_typeId_fkey")
+}
+
+model ProductSize {
+  id        Int         @id @default(autoincrement())
+  size      String
+  stock     Int
+  price     Decimal?    @db.Decimal(10, 2)
+  productId Int
+  cartitem  CartItem[]
+  orderitem OrderItem[]
+  product   Product     @relation(fields: [productId], references: [id], map: "ProductSize_productId_fkey")
+  wishlist  Wishlist[]
+
+  @@unique([productId, size], map: "ProductSize_productId_size_key")
+}
+
+model ProductSubtype {
+  id          Int         @id @default(autoincrement())
+  name        String
+  typeId      Int
+  createdAt   DateTime    @default(now())
+  product     Product[]
+  producttype ProductType @relation(fields: [typeId], references: [id], map: "ProductSubtype_typeId_fkey")
+
+  @@index([typeId], map: "ProductSubtype_typeId_fkey")
+}
+
+model ProductType {
+  id             Int              @id @default(autoincrement())
+  name           String
+  createdAt      DateTime         @default(now())
+  categoryId     Int
+  product        Product[]
+  productsubtype ProductSubtype[]
+  category       Category         @relation(fields: [categoryId], references: [id], map: "ProductType_categoryId_fkey")
+
+  @@index([categoryId], map: "ProductType_categoryId_fkey")
+}
+
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int
+  comment   String?
+  userId    Int
+  productId Int
+  orderId   Int
+  createdAt DateTime @default(now())
+  order     Order    @relation(fields: [orderId], references: [id], map: "fk_review_order")
+  product   Product  @relation(fields: [productId], references: [id], map: "fk_review_product")
+  user      User     @relation(fields: [userId], references: [id], map: "fk_review_user")
+
+  @@unique([userId, productId, orderId])
+}
+
+model Settings {
+  id              Int      @id @default(autoincrement())
+  name            String?
+  email           String?
+  storeName       String?
+  supportEmail    String?
+  supportPhone    String?
+  address         String?
+  logo            String?
+  currency        String?  @default("INR")
+  maintenanceMode Boolean  @default(false)
+  updatedAt       DateTime
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  name         String?
+  email        String?   @unique(map: "User_email_key")
+  phone        String?   @unique(map: "User_phone_key")
+  createdAt    DateTime  @default(now())
+  role         User_Role @default(USER)
+  googleId     String?   @unique(map: "User_googleId_key")
+  isVerified   Boolean   @default(false)
+  passwordHash String?
+
+  sellerStatus SellerStatus @default(NONE)
+
+  sellerApprovedAt     DateTime?
+  sellerRejectedReason String?
+
+  businessName String?
+  businessType String?
+  panNumber    String?
+  gstNumber    String?
+  aadhaarLast4 String?
+
+  sellerSettings   SellerSettings?
+  sellerBankDetail SellerBankDetail?
+
+  products      Product[]
+  orders        Order[]         @relation("UserOrders")
+  orderItems    OrderItem[]
+  cartitem      CartItem[]
+  contact       Contact[]
+  feedback      Feedback[]
+  order         Order[]
+  review        Review[]
+  wishlist      Wishlist[]
+  SellerRequest SellerRequest[]
+  sellerOrders  SellerOrder[]
+  sellerPayouts SellerPayout[]
+
+  @@map("User")
+}
+
+model Wishlist {
+  id          Int          @id @default(autoincrement())
+  userId      Int
+  productId   Int
+  createdAt   DateTime     @default(now())
+  sizeId      Int?
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Wishlist_productId_fkey")
+  productsize ProductSize? @relation(fields: [sizeId], references: [id], map: "Wishlist_sizeId_fkey")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Wishlist_userId_fkey")
+
+  @@unique([userId, productId, sizeId], map: "Wishlist_userId_productId_sizeId_key")
+  @@index([productId], map: "Wishlist_productId_fkey")
+  @@index([sizeId], map: "Wishlist_sizeId_fkey")
+}
+
+model SellerRequest {
+  id     Int     @id @default(autoincrement())
+  userId Int
+  status String  @default("PENDING") // APPROVED | REJECTED
+  reason String?
+
+  panNumber    String?
+  gstNumber    String?
+  aadhaarLast4 String?
+  businessName String?
+  businessType String?
+
+  approvedBy Int?
+  approvedAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model SellerOrder {
+  id          Int                @id @default(autoincrement())
+  orderId     Int
+  sellerId    Int
+  totalAmount Decimal            @db.Decimal(10, 2)
+  status      SellerOrder_Status @default(PENDING)
+  createdAt   DateTime           @default(now())
+
+  order  Order       @relation(fields: [orderId], references: [id])
+  seller User        @relation(fields: [sellerId], references: [id])
+  items  OrderItem[]
+
+  @@index([sellerId])
+  @@index([orderId])
+}
+
+model SellerPayout {
+  id          Int          @id @default(autoincrement())
+  sellerId    Int
+  amount      Decimal      @db.Decimal(10, 2)
+  status      PayoutStatus @default(PENDING)
+  method      String? // bank / upi / wallet
+  referenceId String? // txn id
+  note        String?
+  createdAt   DateTime     @default(now())
+  processedAt DateTime?
+
+  seller User @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+}
+
+model SellerSettings {
+  id       Int @id @default(autoincrement())
+  sellerId Int @unique
+
+  commissionRate  Decimal @default(10.00) @db.Decimal(5, 2)
+  minPayoutAmount Decimal @default(500.00) @db.Decimal(10, 2)
+
+  autoPayout Boolean @default(false)
+  allowCOD   Boolean @default(true)
+  payoutHold Boolean @default(false)
+
+  isVerified Boolean @default(false)
+  isVisible  Boolean @default(true)
+
+  adminNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seller User @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+}
+
+model SellerBankDetail {
+  id       Int @id @default(autoincrement())
+  sellerId Int @unique
+
+  accountHolder String
+  bankName      String
+  accountNumber String
+  ifscCode      String
+
+  upiId          String?
+  isVerified     Boolean @default(false)
+  rejectedReason String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  seller User @relation(fields: [sellerId], references: [id])
+
+  @@index([sellerId])
+}
+
+enum PayoutStatus {
+  PENDING // requested by seller
+  APPROVED // admin approved
+  PAID // money sent
+  REJECTED
+}
+
+enum Order_Status {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum User_Role {
+  USER
+  ADMIN
+  SELLER
+}
+
+enum Contact_Reason {
+  GENERAL
+  PAYMENT_FAILED
+  ORDER_QUERY
+}
+
+enum Contact_Status {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+enum OrderItem_Status {
+  PENDING // seller received order
+  ACCEPTED // seller accepted order
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum SellerStatus {
+  NONE
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum SellerRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum SellerOrder_Status {
+  PENDING // created, seller not yet acted
+  ACCEPTED // seller accepted order
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum ProductStatus {
+  ACTIVE
+  BLOCKED
+  DRAFT
+}
